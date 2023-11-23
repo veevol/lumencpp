@@ -5,6 +5,8 @@
 #include <string>
 #include <utility>
 
+#include "exceptions.h"
+
 namespace lumen {
 
 struct Token {
@@ -27,8 +29,11 @@ struct Token {
     };
 
     [[nodiscard]] Token(
-        Type type, std::optional<std::string> lexeme = std::nullopt)
-    : type{type}, lexeme{std::move(lexeme)} {}
+        Position position, Type type,
+        std::optional<std::string> lexeme = std::nullopt)
+    : position{position}, type{type}, lexeme{std::move(lexeme)} {}
+
+    Position position;
 
     Type type;
     std::optional<std::string> lexeme;
