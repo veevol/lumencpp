@@ -6,4 +6,5 @@ Checks: >-
   clang-analyzer-*,
   cppcoreguidelines-*,
   -modernize-use-trailing-return-type,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -readability-implicit-bool-conversion
