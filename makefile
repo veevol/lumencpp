@@ -18,7 +18,7 @@ DEST_LIB_DIR := /usr/lib
 all: $(TARGET)
 
 $(TARGET): $(OBJ_FILES) | $(LIB_DIR)
-	$(CPP) -o $@ $< $(LD_FLAGS) 
+	$(CPP) -o $@ $^ $(LD_FLAGS) 
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CPP) -o $@ $< $(CPP_FLAGS)
