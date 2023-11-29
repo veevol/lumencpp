@@ -38,6 +38,9 @@ public:
 
     [[nodiscard]] Value(String value) noexcept : m_value{std::move(value)} {}
 
+    [[nodiscard]] Value(const char* value) noexcept
+    : m_value{std::string{value}} {}
+
     [[nodiscard]] Value(Array value) noexcept : m_value{std::move(value)} {}
 
     [[nodiscard]] Value(Object value) noexcept : m_value{std::move(value)} {}
