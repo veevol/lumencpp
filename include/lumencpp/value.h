@@ -3,6 +3,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <initializer_list>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -44,6 +45,10 @@ public:
     [[nodiscard]] Value(Array value) noexcept : m_value{std::move(value)} {}
 
     [[nodiscard]] Value(Object value) noexcept : m_value{std::move(value)} {}
+
+    [[nodiscard]] Value(
+        std::initializer_list<Object::value_type> value) noexcept
+    : m_value{Object{value}} {}
 
     Value& operator=(auto value) noexcept {
         *this = Value{value};
