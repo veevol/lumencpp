@@ -10,6 +10,8 @@ std::vector<Token> Lexer::lex(std::string_view source) {
 
     m_position = {1, 1};
 
+    m_can_parse_long_token = true;
+
     skip_useless();
 
     while (!at_end()) {
