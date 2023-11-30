@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <fmt/format.h>
-
 namespace lumen {
 
 struct Position {
@@ -23,8 +21,8 @@ struct SyntaxError : std::runtime_error {
     : SyntaxError{message.c_str(), position} {}
 
     [[nodiscard]] auto pretty() const noexcept {
-        return fmt::format(
-            "{}:{}: error: {}", position.line, position.column, what());
+        return std::to_string(position.line) + ":" +
+               std::to_string(position.column) + ": error: " + what();
     }
 
     Position position;
