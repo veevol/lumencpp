@@ -7,7 +7,7 @@ LIB_DIR := lib
 CPP := g++
 
 CPP_FLAGS := -Wall -Wextra -std=c++20 -O3 -fPIC -c
-LD_FLAGS := -shared -lfmt
+LD_FLAGS := -shared
 
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
