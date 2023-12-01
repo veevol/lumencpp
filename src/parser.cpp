@@ -35,7 +35,7 @@ Value& Parser::parse_key_path(Value::Object& parent, bool create_if_not_exist) {
     auto key = expect(Token::Type::Identifier).lexeme;
 
     if (!key.has_value()) {
-        throw std::logic_error{"valueless identifier"};
+        throw std::logic_error{"valueless token"};
     }
 
     if (!create_if_not_exist && !parent.contains(*key)) {
@@ -121,6 +121,16 @@ Value Parser::parse_value() {
         return result;
     };
 
+    auto get_token_lexeme = [this] {
+        auto value = eat().lexeme;
+
+        if (!value.has_value()) {
+            throw std::logic_error{"valueless token"};
+        }
+
+        return *value;
+    };
+
     using enum Token::Type;
 
     switch (at().type) {
@@ -131,45 +141,20 @@ Value Parser::parse_value() {
     case Identifier:
         return parse_key_path(m_data, false);
     case Integer: {
-        auto value = eat().lexeme;
+        auto value = get_token_lexeme();
 
-        if (!value.has_value()) {
-            throw std::logic_error{"valueless integer"};
+        if (value.starts_with('-')) {
+            return from_string.operator()<Value::Int>(value);
         }
 
-        if (value->starts_with('-')) {
-            return from_string.operator()<Value::Int>(*value);
-        }
-
-        return from_string.operator()<Value::UInt>(*value);
+        return from_string.operator()<Value::UInt>(value);
     }
-    case Boolean: {
-        auto value = eat().lexeme;
-
-        if (!value.has_value()) {
-            throw std::logic_error{"valueless boolean"};
-        }
-
-        return *value == "true";
-    }
-    case Float: {
-        auto value = eat().lexeme;
-
-        if (!value.has_value()) {
-            throw std::logic_error{"valueless float"};
-        }
-
-        return from_string.operator()<Value::Float>(*value);
-    }
-    case String: {
-        auto value = eat().lexeme;
-
-        if (!value.has_value()) {
-            throw std::logic_error{"valueless string"};
-        }
-
-        return *value;
-    }
+    case Boolean:
+        return get_token_lexeme() == "true";
+    case Float:
+        return from_string.operator()<Value::Float>(get_token_lexeme());
+    case String:
+        return get_token_lexeme();
     default:
         throw SyntaxError{"unexpected token", at().position};
     }
