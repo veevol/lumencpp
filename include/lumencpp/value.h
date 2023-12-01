@@ -90,6 +90,14 @@ public:
     }
 
     template <typename ValueType> [[nodiscard]] auto& get() {
+        if (get_type() == Type::Unknown) {
+            try {
+                m_value = ValueType{};
+            } catch (...) {
+                throw std::logic_error{"invalid value type"};
+            }
+        }
+
         try {
             return std::get<ValueType>(m_value);
         } catch (...) {
