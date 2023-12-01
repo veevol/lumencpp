@@ -16,6 +16,13 @@ Value::Object Parser::parse(const std::vector<Token>& tokens) {
     skip_line_breaks();
 
     while (!at_end()) {
+        if (at().type == Token::Type::Semicolon) {
+            eat();
+            skip_line_breaks();
+
+            continue;
+        }
+
         parse_assignment(m_data);
 
         if (at_end()) {
