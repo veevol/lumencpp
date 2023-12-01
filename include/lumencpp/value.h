@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstdint>
 #include <initializer_list>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -85,11 +86,15 @@ public:
             return static_cast<ValueType>(std::get<Float>(m_value));
         }
 
-        return std::get<ValueType>(m_value);
+        return get<ValueType>();
     }
 
     template <typename ValueType> [[nodiscard]] auto& get() {
-        return std::get<ValueType>(m_value);
+        try {
+            return std::get<ValueType>(m_value);
+        } catch (...) {
+            throw std::runtime_error{"value is of different type"};
+        }
     }
 
     [[nodiscard]] const auto& operator[](const Object::key_type& key) const {
@@ -112,7 +117,11 @@ public:
 
 private:
     template <typename ValueType> [[nodiscard]] const ValueType& get() const {
-        return std::get<ValueType>(m_value);
+        try {
+            return std::get<ValueType>(m_value);
+        } catch (...) {
+            throw std::runtime_error{"value is of different type"};
+        }
     }
 
     std::variant<std::monostate, UInt, Int, Float, Bool, String, Array, Object>
