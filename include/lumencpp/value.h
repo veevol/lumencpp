@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -67,28 +68,31 @@ public:
         return std::holds_alternative<ValueType>(m_value);
     }
 
-    template <typename ValueType> [[nodiscard]] auto get() const {
+    template <typename ValueType> [[nodiscard]] auto as() const {
+        if constexpr (std::is_same_v<ValueType, Bool>) {
+            return std::get<Bool>(m_value);
+        }
+
+        if constexpr (std::is_integral_v<ValueType>) {
+            if (is<UInt>()) {
+                return static_cast<ValueType>(std::get<UInt>(m_value));
+            }
+
+            return static_cast<ValueType>(std::get<Int>(m_value));
+        }
+
+        if constexpr (std::is_floating_point_v<ValueType>) {
+            return static_cast<ValueType>(std::get<Float>(m_value));
+        }
+
         return std::get<ValueType>(m_value);
-    }
-
-    template <std::unsigned_integral Unsigned> [[nodiscard]] auto get() const {
-        return static_cast<Unsigned>(std::get<UInt>(m_value));
-    }
-
-    template <std::signed_integral Signed> [[nodiscard]] auto get() const {
-        return static_cast<Signed>(std::get<Int>(m_value));
-    }
-
-    template <std::floating_point FloatingPoint>
-    [[nodiscard]] auto get() const {
-        return static_cast<FloatingPoint>(std::get<Float>(m_value));
     }
 
     template <typename ValueType> [[nodiscard]] auto& get() {
         return std::get<ValueType>(m_value);
     }
 
-    [[nodiscard]] auto operator[](const Object::key_type& key) const {
+    [[nodiscard]] const auto& operator[](const Object::key_type& key) const {
         return get<Object>().at(key);
     }
 
@@ -96,7 +100,7 @@ public:
         return get<Object>()[key];
     }
 
-    [[nodiscard]] auto operator[](Array::size_type index) const {
+    [[nodiscard]] const auto& operator[](Array::size_type index) const {
         return get<Array>()[index];
     }
 
@@ -107,6 +111,10 @@ public:
     [[nodiscard]] bool operator==(const Value& other) const = default;
 
 private:
+    template <typename ValueType> [[nodiscard]] const ValueType& get() const {
+        return std::get<ValueType>(m_value);
+    }
+
     std::variant<std::monostate, UInt, Int, Float, Bool, String, Array, Object>
         m_value;
 };
