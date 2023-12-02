@@ -72,21 +72,17 @@ public:
     template <typename ValueType> [[nodiscard]] auto as() const {
         if constexpr (std::is_same_v<ValueType, Bool>) {
             return std::get<Bool>(m_value);
-        }
-
-        if constexpr (std::is_integral_v<ValueType>) {
+        } else if constexpr (std::is_integral_v<ValueType>) {
             if (is<UInt>()) {
                 return static_cast<ValueType>(std::get<UInt>(m_value));
             }
 
-            return static_cast<ValueType>(std::get<Int>(m_value));
+            return static_cast<ValueType>(get<Int>());
+        } else if constexpr (std::is_floating_point_v<ValueType>) {
+            return static_cast<ValueType>(get<Float>());
+        } else {
+            return get<ValueType>();
         }
-
-        if constexpr (std::is_floating_point_v<ValueType>) {
-            return static_cast<ValueType>(std::get<Float>(m_value));
-        }
-
-        return get<ValueType>();
     }
 
     template <typename ValueType> [[nodiscard]] auto& get() {
