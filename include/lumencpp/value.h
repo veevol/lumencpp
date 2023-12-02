@@ -69,7 +69,7 @@ public:
         return std::holds_alternative<ValueType>(m_value);
     }
 
-    template <typename ValueType> [[nodiscard]] auto as() const {
+    template <typename ValueType> [[nodiscard]] decltype(auto) as() const {
         if constexpr (std::is_same_v<ValueType, Bool>) {
             return std::get<Bool>(m_value);
         } else if constexpr (std::is_integral_v<ValueType>) {
