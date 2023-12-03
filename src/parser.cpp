@@ -1,4 +1,6 @@
-#include <sstream>
+#include <bitset>
+#include <ios>
+#include <limits>
 
 #include "../include/lumencpp/parser.h"
 
@@ -121,23 +123,38 @@ Value::Object Parser::parse_object() {
     return result;
 }
 
-Value Parser::parse_value() {
-    auto from_string = []<typename ValueType>(std::string value) {
-        ValueType result;
-        std::stringstream{std::move(value)} >> result;
-        return result;
-    };
+Value Parser::parse_integer() {
+    auto lexeme = get_token_lexeme();
 
-    auto get_token_lexeme = [this] {
-        auto value = eat().lexeme;
+    if (lexeme.starts_with('-')) {
+        return from_string<Value::Int>(lexeme);
+    }
 
-        if (!value.has_value()) {
-            throw std::logic_error{"valueless token"};
+    if (lexeme.starts_with('0')) {
+        if (lexeme.size() < 2) {
+            return 0U;
         }
 
-        return *value;
-    };
+        auto number = lexeme.substr(2);
 
+        if (lexeme.starts_with("0x")) {
+            return from_string<Value::UInt>(number, std::hex);
+        }
+
+        if (lexeme.starts_with("0o")) {
+            return from_string<Value::UInt>(number, std::oct);
+        }
+
+        if (lexeme.starts_with("0b")) {
+            return std::bitset<std::numeric_limits<Value::UInt>::digits>(number)
+                .to_ulong();
+        }
+    }
+
+    return from_string<Value::UInt>(lexeme);
+}
+
+Value Parser::parse_value() {
     using enum Token::Type;
 
     switch (at().type) {
@@ -147,19 +164,12 @@ Value Parser::parse_value() {
         return parse_object();
     case Identifier:
         return parse_key_path(m_data, false);
-    case Integer: {
-        auto value = get_token_lexeme();
-
-        if (value.starts_with('-')) {
-            return from_string.operator()<Value::Int>(value);
-        }
-
-        return from_string.operator()<Value::UInt>(value);
-    }
+    case Integer:
+        return parse_integer();
     case Boolean:
         return get_token_lexeme() == "true";
     case Float:
-        return from_string.operator()<Value::Float>(get_token_lexeme());
+        return from_string<Value::Float>(get_token_lexeme());
     case String:
         return get_token_lexeme();
     default:

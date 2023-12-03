@@ -1,6 +1,7 @@
 #ifndef LUMENCPP_PARSER_H
 #define LUMENCPP_PARSER_H
 
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -43,8 +44,31 @@ private:
     [[nodiscard]] Value&
     parse_key_path(Value::Object& parent, bool create_if_not_exist = true);
 
+    [[nodiscard]] auto get_token_lexeme() {
+        auto value = eat().lexeme;
+
+        if (!value.has_value()) {
+            throw std::logic_error{"valueless token"};
+        }
+
+        return *value;
+    }
+
+    template <typename ValueType, typename... Manipulators>
+    [[nodiscard]] auto
+    from_string(std::string value, Manipulators... manipulators) const {
+        ValueType result;
+
+        std::istringstream iss{std::move(value)};
+        (manipulators(iss), ...);
+
+        iss >> result;
+        return result;
+    }
+
     [[nodiscard]] Value::Array parse_array();
     [[nodiscard]] Value::Object parse_object();
+    [[nodiscard]] Value parse_integer();
 
     [[nodiscard]] Value parse_value();
     void parse_assignment(Value::Object& parent);
