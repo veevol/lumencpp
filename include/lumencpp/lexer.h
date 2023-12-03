@@ -2,6 +2,7 @@
 #define LUMENCPP_LEXER_H
 
 #include <cctype>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -50,6 +51,8 @@ private:
             skip_whitespaces();
         }
     }
+
+    [[nodiscard]] std::string get_integer();
 
     [[nodiscard]] Token get_identifier() noexcept;
     [[nodiscard]] Token get_number();

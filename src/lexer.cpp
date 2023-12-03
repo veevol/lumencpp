@@ -24,6 +24,21 @@ std::vector<Token> Lexer::lex(std::string_view source) {
     return result;
 }
 
+std::string Lexer::get_integer() {
+    std::string result;
+
+    while (!at_end() && (std::isdigit(at()) || at() == '_')) {
+        if (at() == '_') {
+            eat();
+            continue;
+        }
+
+        result += eat();
+    }
+
+    return result;
+}
+
 Token Lexer::get_identifier() noexcept {
     std::string result;
     auto position = m_position;
@@ -43,60 +58,67 @@ Token Lexer::get_identifier() noexcept {
 
 Token Lexer::get_number() {
     std::string result;
-    bool valid = false;
     auto position = m_position;
 
-    if (at() == '+') {
-        eat();
-    } else if (at() == '-') {
+    if (at() == '0') {
         result += eat();
-    }
 
-    while (!at_end() && (std::isdigit(at()) || at() == '.' || at() == '_')) {
-        if (at() == '.') {
-            auto throw_if_invalid_fp = [this, valid, position] {
-                if (!valid) {
-                    throw SyntaxError{
-                        "invalid floating-point literal", position};
-                }
-            };
+        if (at_end()) {
+            return {position, Token::Type::Integer, result};
+        }
 
-            throw_if_invalid_fp();
+        if (std::isdigit(at()) || at() == '_') {
+            throw SyntaxError{"leading zeros are not allowed", m_position};
+        }
 
-            valid = false;
+        switch (at()) {
+        case 'x':
+        case 'o':
+        case 'b':
+            result += eat();
+            result += get_integer();
+
+            return {position, Token::Type::Integer, result};
+        case '.':
             result += eat();
 
-            while (!at_end() && (std::isdigit(at()) || at() == '_')) {
-                if (at() == '_') {
-                    eat();
-                    continue;
-                }
-
-                valid = true;
-                result += eat();
+            if (auto integer = get_integer(); !integer.empty()) {
+                result += integer;
+            } else {
+                throw SyntaxError{"expected a digit", m_position};
             }
 
-            throw_if_invalid_fp();
-
-            m_can_parse_long_token = false;
-
             return {position, Token::Type::Float, result};
+        default:
+            throw SyntaxError{"unexpected character", m_position};
         }
-
-        if (at() == '_') {
+    } else {
+        if (at() == '+') {
             eat();
-            continue;
+        } else if (at() == '-') {
+            result += eat();
         }
-
-        valid = true;
-        result += eat();
     }
 
-    if (!valid) {
-        throw SyntaxError{"invalid integer literal", position};
+    if (auto integer = get_integer(); !integer.empty()) {
+        result += integer;
+    } else {
+        throw SyntaxError{"expected a digit", m_position};
     }
 
     m_can_parse_long_token = false;
+
+    if (at() == '.') {
+        result += eat();
+
+        if (auto integer = get_integer(); !integer.empty()) {
+            result += integer;
+        } else {
+            throw SyntaxError{"expected a digit", m_position};
+        }
+
+        return {position, Token::Type::Float, result};
+    }
 
     return {position, Token::Type::Integer, result};
 }
