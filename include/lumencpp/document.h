@@ -53,11 +53,11 @@ struct Document {
     Value::Object data;
 };
 
-[[nodiscard]] Document parse(std::string_view source) {
+[[nodiscard]] inline Document parse(std::string_view source) {
     return Parser{}.parse(Lexer{}.lex(source));
 }
 
-[[nodiscard]] auto parse_file(const std::filesystem::path& path) {
+[[nodiscard]] inline auto parse_file(const std::filesystem::path& path) {
     std::ostringstream buffer;
     buffer << std::ifstream{path}.rdbuf();
 
