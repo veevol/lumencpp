@@ -24,21 +24,6 @@ std::vector<Token> Lexer::lex(std::string_view source) {
     return result;
 }
 
-std::string Lexer::get_integer() {
-    std::string result;
-
-    while (!at_end() && (std::isdigit(at()) || at() == '_')) {
-        if (at() == '_') {
-            eat();
-            continue;
-        }
-
-        result += eat();
-    }
-
-    return result;
-}
-
 Token Lexer::get_identifier() noexcept {
     std::string result;
     auto position = m_position;
@@ -60,6 +45,24 @@ Token Lexer::get_number() {
     std::string result;
     auto position = m_position;
 
+    auto get_if_e = [&] {
+        if (at_end() || at() != 'e') {
+            return false;
+        }
+
+        result += eat();
+
+        if (!at_end() && (at() == '-' || at() == '+')) {
+            result += eat();
+        }
+
+        result += get_integer();
+
+        return true;
+    };
+
+    m_can_parse_long_token = false;
+
     if (at() == '0') {
         result += eat();
 
@@ -73,20 +76,30 @@ Token Lexer::get_number() {
 
         switch (at()) {
         case 'x':
+            result += eat();
+            result += get_integer(
+                [](char character) { return std::isxdigit(character); });
+
+            return {position, Token::Type::Integer, result};
         case 'o':
+            result += eat();
+            result += get_integer([](char character) {
+                return character >= '0' && character <= '7';
+            });
+
+            return {position, Token::Type::Integer, result};
         case 'b':
             result += eat();
-            result += get_integer();
+            result += get_integer([](char character) {
+                return character == '0' || character == '1';
+            });
 
             return {position, Token::Type::Integer, result};
         case '.':
             result += eat();
+            result += get_integer();
 
-            if (auto integer = get_integer(); !integer.empty()) {
-                result += integer;
-            } else {
-                throw SyntaxError{"expected a digit", m_position};
-            }
+            get_if_e();
 
             return {position, Token::Type::Float, result};
         default:
@@ -100,23 +113,18 @@ Token Lexer::get_number() {
         }
     }
 
-    if (auto integer = get_integer(); !integer.empty()) {
-        result += integer;
-    } else {
-        throw SyntaxError{"expected a digit", m_position};
-    }
-
-    m_can_parse_long_token = false;
+    result += get_integer();
 
     if (at() == '.') {
         result += eat();
+        result += get_integer();
 
-        if (auto integer = get_integer(); !integer.empty()) {
-            result += integer;
-        } else {
-            throw SyntaxError{"expected a digit", m_position};
-        }
+        get_if_e();
 
+        return {position, Token::Type::Float, result};
+    }
+
+    if (get_if_e()) {
         return {position, Token::Type::Float, result};
     }
 
