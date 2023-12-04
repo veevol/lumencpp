@@ -52,7 +52,29 @@ private:
         }
     }
 
-    [[nodiscard]] std::string get_integer();
+    [[nodiscard]] std::string get_integer(auto is_digit) {
+        std::string result;
+
+        while (!at_end() && (is_digit(at()) || at() == '_')) {
+            if (at() == '_') {
+                eat();
+                continue;
+            }
+
+            result += eat();
+        }
+
+        if (result.empty()) {
+            throw SyntaxError{"expected a digit", m_position};
+        }
+
+        return result;
+    }
+
+    [[nodiscard]] std::string get_integer() {
+        return get_integer(
+            [](char character) { return std::isdigit(character); });
+    }
 
     [[nodiscard]] Token get_identifier() noexcept;
     [[nodiscard]] Token get_number();
