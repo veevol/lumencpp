@@ -24,7 +24,7 @@ public:
     using Array = std::vector<Value>;
     using Object = std::unordered_map<std::string, Value>;
 
-    enum class Type { Unknown, UInt, Int, Float, Bool, String, Array, Object };
+    enum struct Type { Unknown, UInt, Int, Float, Bool, String, Array, Object };
 
     [[nodiscard]] Value() noexcept : m_value{std::monostate{}} {}
 
