@@ -85,6 +85,15 @@ public:
         }
     }
 
+    template <typename ValueType>
+    [[nodiscard]] auto get_or(ValueType value) const noexcept {
+        try {
+            return as<ValueType>();
+        } catch (...) {
+            return value;
+        }
+    }
+
     template <typename ValueType> [[nodiscard]] auto& get() {
         if (get_type() == Type::Unknown) {
             try {
