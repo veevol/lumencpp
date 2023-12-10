@@ -31,7 +31,7 @@ To parse a file, you can use the `lumen::parse_file` function:
 
 int main() {
     try {
-        auto document = lumen::parse_file("metadata.lu");
+        auto document = lumen::parse_file("metadata.lm");
         std::cout << document["license"].as<std::string>() << '\n';
     } catch (const lumen::SyntaxError& error) {
         std::cout << error.pretty() << '\n';
