@@ -194,6 +194,11 @@ Token Lexer::get_token() {
         if (at() == '"' || at() == '\'') {
             return get_string();
         }
+
+        if (at() == '`') {
+            auto token = get_string();
+            return {token.position, Token::Type::Identifier, token.lexeme};
+        }
     }
 
     auto position = m_position;
