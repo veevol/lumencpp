@@ -24,7 +24,7 @@ To install the library system-wide, run:
 To parse a file, you can use the `lumen::parse_file` function:
 
 ```cpp
-#include <lumencpp/document.h>
+#include <lumencpp/lumen.h>
 
 #include <iostream>
 #include <string>
@@ -44,7 +44,7 @@ int main() {
 To parse a string, use `lumen::parse` function:
 
 ```cpp
-#include <lumencpp/document.h>
+#include <lumencpp/lumen.h>
 
 #include <iostream>
 #include <string>
@@ -67,7 +67,7 @@ int main() {
 To construct a document, you can use `std::map`-like initialization syntax:
 
 ```cpp
-#include <lumencpp/document.h>
+#include <lumencpp/lumen.h>
 #include <iostream>
 
 int main() {
