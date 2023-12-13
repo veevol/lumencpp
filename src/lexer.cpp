@@ -103,7 +103,7 @@ Token Lexer::get_number() {
 
             return {position, Token::Type::Float, result};
         default:
-            throw SyntaxError{"unexpected character", m_position};
+            return {position, Token::Type::Integer, result};
         }
     } else {
         if (at() == '+') {
