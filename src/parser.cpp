@@ -1,13 +1,15 @@
 #include <bitset>
 #include <ios>
 #include <limits>
+#include <utility>
 
 #include "../include/lumencpp/parser.h"
 
 namespace lumen {
 
-Value::Object Parser::parse(const std::vector<Token>& tokens) {
-    m_data = {};
+Value::Object
+Parser::parse(const std::vector<Token>& tokens, Value::Object predefined) {
+    m_data = std::move(predefined);
 
     if (!tokens.empty() && tokens.back().type != Token::Type::Eof) {
         throw std::logic_error{"expected EOF at the end of the input"};
