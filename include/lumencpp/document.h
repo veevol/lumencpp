@@ -53,15 +53,17 @@ struct Document {
     Value::Object data;
 };
 
-[[nodiscard]] inline Document parse(std::string_view source) {
-    return Parser{}.parse(Lexer{}.lex(source));
+[[nodiscard]] inline Document
+parse(std::string_view source, Value::Object predefined = {}) {
+    return Parser{}.parse(Lexer{}.lex(source), std::move(predefined));
 }
 
-[[nodiscard]] inline auto parse_file(const std::filesystem::path& path) {
+[[nodiscard]] inline auto
+parse_file(const std::filesystem::path& path, Value::Object predefined = {}) {
     std::ostringstream buffer;
     buffer << std::ifstream{path}.rdbuf();
 
-    return parse(buffer.str());
+    return parse(buffer.str(), std::move(predefined));
 }
 
 } // namespace lumen

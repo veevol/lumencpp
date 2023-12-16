@@ -13,7 +13,8 @@ namespace lumen {
 
 class Parser {
 public:
-    [[nodiscard]] Value::Object parse(const std::vector<Token>& tokens);
+    [[nodiscard]] Value::Object
+    parse(const std::vector<Token>& tokens, Value::Object predefined = {});
 
 private:
     [[nodiscard]] auto at() const noexcept { return *m_at; }
