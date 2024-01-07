@@ -69,10 +69,22 @@ public:
 
     [[nodiscard]] Value(Bool value) noexcept : m_value{value} {}
 
-    [[nodiscard]] Value(String value) noexcept : m_value{std::move(value)} {}
+    template <typename StringLike>
+        requires std::is_constructible_v<String, StringLike> &&
+                 (!std::is_same_v<StringLike, String>) &&
+                 (!std::is_same_v<StringLike, std::nullptr_t>) &&
+                 (!std::is_trivially_copyable_v<StringLike>)
+    [[nodiscard]] Value(StringLike value) noexcept
+    : m_value{String{std::move(value)}} {}
 
-    [[nodiscard]] Value(const char* value) noexcept
-    : m_value{std::string{value}} {}
+    template <typename StringLike>
+        requires std::is_constructible_v<String, StringLike> &&
+                 (!std::is_same_v<StringLike, String>) &&
+                 (!std::is_same_v<StringLike, std::nullptr_t>) &&
+                 std::is_trivially_copyable_v<StringLike>
+    [[nodiscard]] Value(StringLike value) noexcept : m_value{String{value}} {}
+
+    [[nodiscard]] Value(String value) noexcept : m_value{std::move(value)} {}
 
     [[nodiscard]] Value(Array value) noexcept : m_value{std::move(value)} {}
 
