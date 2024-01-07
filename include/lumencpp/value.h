@@ -14,6 +14,18 @@
 
 namespace lumen {
 
+namespace details {
+
+template <typename ValueType> struct IsStdVector : std::false_type {};
+
+template <typename Contained, class Allocator>
+struct IsStdVector<std::vector<Contained, Allocator>> : std::true_type {};
+
+template <typename ValueType>
+constexpr bool is_std_vector_v = IsStdVector<ValueType>::value;
+
+} // namespace details
+
 class Value {
 public:
     using UInt = std::uint64_t;
@@ -80,6 +92,15 @@ public:
             return static_cast<ValueType>(get<Int>());
         } else if constexpr (std::is_floating_point_v<ValueType>) {
             return static_cast<ValueType>(get<Float>());
+        } else if constexpr (details::is_std_vector_v<ValueType>) {
+            ValueType result;
+            result.reserve(get<Array>().size());
+
+            for (const auto& value : get<Array>()) {
+                result.push_back(value.as<typename ValueType::value_type>());
+            }
+
+            return result;
         } else {
             return get<ValueType>();
         }
