@@ -1,7 +1,6 @@
 #ifndef LUMENCPP_VALUE_H
 #define LUMENCPP_VALUE_H
 
-#include <concepts>
 #include <cstdint>
 #include <initializer_list>
 #include <stdexcept>
@@ -92,6 +91,10 @@ public:
             return static_cast<ValueType>(get<Int>());
         } else if constexpr (std::is_floating_point_v<ValueType>) {
             return static_cast<ValueType>(get<Float>());
+        } else if constexpr (std::is_same_v<ValueType, String>) {
+            return get<String>();
+        } else if constexpr (std::is_constructible_v<ValueType, const char*>) {
+            return ValueType{get<String>().c_str()};
         } else if constexpr (details::is_std_vector_v<ValueType>) {
             ValueType result;
             result.reserve(get<Array>().size());
