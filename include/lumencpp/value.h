@@ -1,8 +1,11 @@
 #ifndef LUMENCPP_VALUE_H
 #define LUMENCPP_VALUE_H
 
+#include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -17,11 +20,27 @@ namespace details {
 
 template <typename ValueType> struct IsStdVector : std::false_type {};
 
-template <typename Contained, class Allocator>
-struct IsStdVector<std::vector<Contained, Allocator>> : std::true_type {};
+template <typename... Args>
+struct IsStdVector<std::vector<Args...>> : std::true_type {};
 
 template <typename ValueType>
-constexpr bool is_std_vector_v = IsStdVector<ValueType>::value;
+concept StdVector = IsStdVector<ValueType>::value;
+
+template <typename ValueType> struct IsStdMap : std::false_type {};
+
+template <typename... Args>
+struct IsStdMap<std::map<Args...>> : std::true_type {};
+
+template <typename ValueType>
+concept StdMap = IsStdMap<ValueType>::value;
+
+template <typename ValueType> struct IsStdUnorderedMap : std::false_type {};
+
+template <typename... Args>
+struct IsStdUnorderedMap<std::unordered_map<Args...>> : std::true_type {};
+
+template <typename ValueType>
+concept StdUnorderedMap = IsStdUnorderedMap<ValueType>::value;
 
 } // namespace details
 
@@ -80,33 +99,94 @@ public:
         return std::holds_alternative<ValueType>(m_value);
     }
 
-    template <typename ValueType> [[nodiscard]] decltype(auto) as() const {
-        if constexpr (std::is_same_v<ValueType, Bool>) {
-            return std::get<Bool>(m_value);
-        } else if constexpr (std::is_integral_v<ValueType>) {
-            if (is<UInt>()) {
-                return static_cast<ValueType>(std::get<UInt>(m_value));
-            }
-
-            return static_cast<ValueType>(get<Int>());
-        } else if constexpr (std::is_floating_point_v<ValueType>) {
-            return static_cast<ValueType>(get<Float>());
-        } else if constexpr (std::is_same_v<ValueType, String>) {
-            return get<String>();
-        } else if constexpr (std::is_constructible_v<ValueType, const char*>) {
-            return ValueType{get<String>().c_str()};
-        } else if constexpr (details::is_std_vector_v<ValueType>) {
-            ValueType result;
-            result.reserve(get<Array>().size());
-
-            for (const auto& value : get<Array>()) {
-                result.push_back(value.as<typename ValueType::value_type>());
-            }
-
-            return result;
-        } else {
-            return get<ValueType>();
+    template <std::integral Integral>
+        requires(!std::is_same_v<Integral, Bool>)
+    [[nodiscard]] auto as() const {
+        if (is<UInt>()) {
+            return static_cast<Integral>(get<UInt>());
         }
+
+        return static_cast<Integral>(get_safe<Int>());
+    }
+
+    template <std::same_as<Bool>> [[nodiscard]] auto as() const {
+        return get_safe<Bool>();
+    }
+
+    template <std::floating_point FloatingPoint> [[nodiscard]] auto as() const {
+        if (is<UInt>()) {
+            return static_cast<FloatingPoint>(get<UInt>());
+        }
+
+        if (is<Int>()) {
+            return static_cast<FloatingPoint>(get<Int>());
+        }
+
+        return static_cast<FloatingPoint>(get_safe<Float>());
+    }
+
+    template <std::constructible_from<const char*> StringLike>
+        requires(
+            !std::is_same_v<StringLike, String> &&
+            !std::is_same_v<StringLike, Bool>)
+    [[nodiscard]] auto as() const {
+        return StringLike{get_safe<String>().c_str()};
+    }
+
+    template <std::same_as<String>> [[nodiscard]] const auto& as() const {
+        return get_safe<String>();
+    }
+
+    template <details::StdVector Vector>
+        requires(!std::is_same_v<Vector, Array>)
+    [[nodiscard]] auto as() const {
+        Vector result;
+        result.reserve(get_safe<Array>().size());
+
+        for (const auto& value : get<Array>()) {
+            result.push_back(value.as<typename Vector::value_type>());
+        }
+
+        return result;
+    }
+
+    template <std::same_as<Array>> [[nodiscard]] const auto& as() const {
+        return get_safe<Array>();
+    }
+
+    template <details::StdMap Map>
+        requires(
+            std::is_constructible_v<typename Map::key_type, Object::key_type>)
+    [[nodiscard]] auto as() const {
+        Map result;
+
+        for (const auto& [key, value] : get_safe<Object>()) {
+            result[typename Map::key_type{key}] =
+                value.template as<typename Map::mapped_type>();
+        }
+
+        return result;
+    }
+
+    template <details::StdUnorderedMap UnorderedMap>
+        requires(
+            std::is_constructible_v<
+                typename UnorderedMap::key_type, Object::key_type> &&
+            !std::is_same_v<UnorderedMap, Object>)
+    [[nodiscard]] auto as() const {
+        UnorderedMap result;
+        result.reserve(get_safe<Object>().size());
+
+        for (const auto& [key, value] : get<Object>()) {
+            result[typename UnorderedMap::key_type{key}] =
+                value.template as<typename UnorderedMap::mapped_type>();
+        }
+
+        return result;
+    }
+
+    template <std::same_as<Object>> [[nodiscard]] const auto& as() const {
+        return get_safe<Object>();
     }
 
     template <typename ValueType>
@@ -135,7 +215,7 @@ public:
     }
 
     [[nodiscard]] const auto& operator[](const Object::key_type& key) const {
-        return get<Object>().at(key);
+        return get_safe<Object>().at(key);
     }
 
     [[nodiscard]] auto& operator[](const Object::key_type& key) {
@@ -143,7 +223,7 @@ public:
     }
 
     [[nodiscard]] const auto& operator[](Array::size_type index) const {
-        return get<Array>()[index];
+        return get_safe<Array>()[index];
     }
 
     [[nodiscard]] auto& operator[](Array::size_type index) {
@@ -153,12 +233,17 @@ public:
     [[nodiscard]] bool operator==(const Value& other) const = default;
 
 private:
-    template <typename ValueType> [[nodiscard]] const ValueType& get() const {
+    template <typename ValueType>
+    [[nodiscard]] const ValueType& get_safe() const {
         try {
-            return std::get<ValueType>(m_value);
+            return get<ValueType>();
         } catch (...) {
             throw std::runtime_error{"value is of different type"};
         }
+    }
+
+    template <typename ValueType> [[nodiscard]] const ValueType& get() const {
+        return std::get<ValueType>(m_value);
     }
 
     std::variant<std::monostate, UInt, Int, Float, Bool, String, Array, Object>
