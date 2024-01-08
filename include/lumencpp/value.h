@@ -244,6 +244,19 @@ public:
         return get<Array>()[index];
     }
 
+    template <typename ValueType>
+    [[nodiscard]] bool operator==(const ValueType& other) const noexcept {
+        try {
+            return as<ValueType>() == other;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    [[nodiscard]] bool operator!=(const auto& other) const noexcept {
+        return !(*this == other);
+    }
+
     [[nodiscard]] bool operator==(const Value& other) const = default;
 
 private:
