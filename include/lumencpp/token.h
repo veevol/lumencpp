@@ -1,6 +1,7 @@
 #ifndef LUMENCPP_TOKEN_H
 #define LUMENCPP_TOKEN_H
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -10,7 +11,7 @@
 namespace lumen {
 
 struct Token {
-    enum struct Type {
+    enum struct Type : std::uint8_t {
         Equal,
         Semicolon,
         Comma,

@@ -56,7 +56,16 @@ using Object = std::unordered_map<std::string, Value>;
 
 class Value {
 public:
-    enum struct Type { Unknown, UInt, Int, Float, Bool, String, Array, Object };
+    enum struct Type : std::uint8_t {
+        Unknown,
+        UInt,
+        Int,
+        Float,
+        Bool,
+        String,
+        Array,
+        Object
+    };
 
     [[nodiscard]] Value() noexcept : m_value{std::monostate{}} {}
 
