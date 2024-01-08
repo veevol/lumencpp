@@ -8,8 +8,8 @@
 namespace lumen {
 
 struct Position {
-    std::size_t line;
-    std::size_t column;
+    std::uint32_t line;
+    std::uint32_t column;
 };
 
 struct SyntaxError : std::runtime_error {
