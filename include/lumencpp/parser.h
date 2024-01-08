@@ -13,8 +13,8 @@ namespace lumen {
 
 class Parser {
 public:
-    [[nodiscard]] Value::Object
-    parse(const std::vector<Token>& tokens, Value::Object predefined = {});
+    [[nodiscard]] Object
+    parse(const std::vector<Token>& tokens, Object predefined = {});
 
 private:
     [[nodiscard]] auto at() const noexcept { return *m_at; }
@@ -43,7 +43,7 @@ private:
     }
 
     [[nodiscard]] Value&
-    parse_key_path(Value::Object& parent, bool create_if_not_exist = true);
+    parse_key_path(Object& parent, bool create_if_not_exist = true);
 
     [[nodiscard]] auto get_token_lexeme() {
         auto value = eat().lexeme;
@@ -67,14 +67,14 @@ private:
         return result;
     }
 
-    [[nodiscard]] Value::Array parse_array();
-    [[nodiscard]] Value::Object parse_object();
+    [[nodiscard]] Array parse_array();
+    [[nodiscard]] Object parse_object();
     [[nodiscard]] Value parse_integer();
 
     [[nodiscard]] Value parse_value();
-    void parse_assignment(Value::Object& parent);
+    void parse_assignment(Object& parent);
 
-    Value::Object m_data;
+    Object m_data;
 
     std::vector<Token>::const_iterator m_at;
 };

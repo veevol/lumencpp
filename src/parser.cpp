@@ -7,8 +7,7 @@
 
 namespace lumen {
 
-Value::Object
-Parser::parse(const std::vector<Token>& tokens, Value::Object predefined) {
+Object Parser::parse(const std::vector<Token>& tokens, Object predefined) {
     m_data = std::move(predefined);
 
     if (!tokens.empty() && tokens.back().type != Token::Type::Eof) {
@@ -42,7 +41,7 @@ Parser::parse(const std::vector<Token>& tokens, Value::Object predefined) {
     return std::move(m_data);
 }
 
-Value& Parser::parse_key_path(Value::Object& parent, bool create_if_not_exist) {
+Value& Parser::parse_key_path(Object& parent, bool create_if_not_exist) {
     auto key = expect(Token::Type::Identifier).lexeme;
 
     if (!key.has_value()) {
@@ -58,15 +57,14 @@ Value& Parser::parse_key_path(Value::Object& parent, bool create_if_not_exist) {
     if (at().type == Token::Type::Dot) {
         eat();
 
-        return parse_key_path(
-            result->get<Value::Object>(), create_if_not_exist);
+        return parse_key_path(result->get<Object>(), create_if_not_exist);
     }
 
     return *result;
 }
 
-Value::Array Parser::parse_array() {
-    Value::Array result;
+Array Parser::parse_array() {
+    Array result;
 
     auto array_position = expect(Token::Type::LeftBracket).position;
 
@@ -95,8 +93,8 @@ Value::Array Parser::parse_array() {
     return result;
 }
 
-Value::Object Parser::parse_object() {
-    Value::Object result;
+Object Parser::parse_object() {
+    Object result;
 
     auto object_position = expect(Token::Type::LeftBrace).position;
 
@@ -129,7 +127,7 @@ Value Parser::parse_integer() {
     auto lexeme = get_token_lexeme();
 
     if (lexeme.starts_with('-')) {
-        return from_string<Value::Int>(lexeme);
+        return from_string<Int>(lexeme);
     }
 
     if (lexeme.starts_with('0')) {
@@ -140,46 +138,44 @@ Value Parser::parse_integer() {
         auto number = lexeme.substr(2);
 
         if (lexeme.starts_with("0x")) {
-            return from_string<Value::UInt>(number, std::hex);
+            return from_string<UInt>(number, std::hex);
         }
 
         if (lexeme.starts_with("0o")) {
-            return from_string<Value::UInt>(number, std::oct);
+            return from_string<UInt>(number, std::oct);
         }
 
         if (lexeme.starts_with("0b")) {
-            return std::bitset<std::numeric_limits<Value::UInt>::digits>(number)
+            return std::bitset<std::numeric_limits<UInt>::digits>(number)
                 .to_ulong();
         }
     }
 
-    return from_string<Value::UInt>(lexeme);
+    return from_string<UInt>(lexeme);
 }
 
 Value Parser::parse_value() {
-    using enum Token::Type;
-
     switch (at().type) {
-    case LeftBracket:
+    case Token::Type::LeftBracket:
         return parse_array();
-    case LeftBrace:
+    case Token::Type::LeftBrace:
         return parse_object();
-    case Identifier:
+    case Token::Type::Identifier:
         return parse_key_path(m_data, false);
-    case Integer:
+    case Token::Type::Integer:
         return parse_integer();
-    case Boolean:
+    case Token::Type::Boolean:
         return get_token_lexeme() == "true";
-    case Float:
-        return from_string<Value::Float>(get_token_lexeme());
-    case String:
+    case Token::Type::Float:
+        return from_string<Float>(get_token_lexeme());
+    case Token::Type::String:
         return get_token_lexeme();
     default:
         throw SyntaxError{"unexpected token", at().position};
     }
 }
 
-void Parser::parse_assignment(Value::Object& parent) {
+void Parser::parse_assignment(Object& parent) {
     auto& key = parse_key_path(parent);
     expect(Token::Type::Equal);
     key = parse_value();

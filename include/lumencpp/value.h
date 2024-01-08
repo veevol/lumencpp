@@ -44,16 +44,18 @@ concept StdUnorderedMap = IsStdUnorderedMap<ValueType>::value;
 
 } // namespace details
 
+class Value;
+
+using UInt = std::uint64_t;
+using Int = std::int64_t;
+using Float = double;
+using Bool = bool;
+using String = std::string;
+using Array = std::vector<Value>;
+using Object = std::unordered_map<std::string, Value>;
+
 class Value {
 public:
-    using UInt = std::uint64_t;
-    using Int = std::int64_t;
-    using Float = double;
-    using Bool = bool;
-    using String = std::string;
-    using Array = std::vector<Value>;
-    using Object = std::unordered_map<std::string, Value>;
-
     enum struct Type { Unknown, UInt, Int, Float, Bool, String, Array, Object };
 
     [[nodiscard]] Value() noexcept : m_value{std::monostate{}} {}
