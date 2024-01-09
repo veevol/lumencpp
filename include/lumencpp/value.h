@@ -57,7 +57,7 @@ using Object = std::unordered_map<std::string, Value>;
 class Value {
 public:
     enum struct Type : std::uint8_t {
-        Unknown,
+        Undefined,
         UInt,
         Int,
         Float,
@@ -222,7 +222,7 @@ public:
     }
 
     template <typename ValueType> [[nodiscard]] auto& get() {
-        if (get_type() == Type::Unknown) {
+        if (get_type() == Type::Undefined) {
             try {
                 m_value = ValueType{};
             } catch (...) {
