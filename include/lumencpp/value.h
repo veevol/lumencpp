@@ -223,11 +223,7 @@ public:
 
     template <typename ValueType> [[nodiscard]] auto& get() {
         if (get_type() == Type::Undefined) {
-            try {
-                m_value = ValueType{};
-            } catch (...) {
-                throw std::logic_error{"invalid value type"};
-            }
+            m_value = ValueType{};
         }
 
         try {
