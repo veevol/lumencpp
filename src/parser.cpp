@@ -7,11 +7,16 @@
 
 namespace lumen {
 
-Object Parser::parse(const std::vector<Token>& tokens, Object predefined) {
+Object Parser::parse(
+    const std::vector<Token>& tokens, std::string filename, Object predefined) {
     m_data = std::move(predefined);
 
+    m_filename = std::move(filename);
+
     if (!tokens.empty() && tokens.back().type != Token::Type::Eof) {
-        throw std::logic_error{"expected EOF at the end of the input"};
+        throw ParseError{
+            "expected an end of file at the end of the input",
+            std::move(m_filename), tokens.back().source};
     }
 
     m_at = tokens.begin();
@@ -32,8 +37,8 @@ Object Parser::parse(const std::vector<Token>& tokens, Object predefined) {
             break;
         }
 
-        expect(
-            Token::Type::LineBreak, Token::Type::Semicolon, Token::Type::Eof);
+        expect<
+            Token::Type::LineBreak, Token::Type::Semicolon, Token::Type::Eof>();
 
         skip_line_breaks();
     }
@@ -41,23 +46,30 @@ Object Parser::parse(const std::vector<Token>& tokens, Object predefined) {
     return std::move(m_data);
 }
 
-Value& Parser::parse_key_path(Object& parent, bool create_if_not_exist) {
-    auto key = expect(Token::Type::Identifier).lexeme;
+Value& Parser::parse_key_path(
+    Object& parent, const Token& token, bool create_if_not_exist) {
+    auto key = get_token_lexeme(token);
+    auto source = token.source;
 
-    if (!key.has_value()) {
-        throw std::logic_error{"valueless token"};
+    if (!create_if_not_exist && !parent.contains(key)) {
+        throw ParseError{
+            "field '" + key + "' does not exist", std::move(m_filename),
+            source};
     }
 
-    if (!create_if_not_exist && !parent.contains(*key)) {
-        throw std::runtime_error{"key doesn't exist"};
-    }
-
-    Value* result = &parent[*key];
+    Value* result = &parent[key];
 
     if (at().type == Token::Type::Dot) {
         eat();
 
-        return parse_key_path(result->get<Object>(), create_if_not_exist);
+        try {
+            return parse_key_path(result->get<Object>(), create_if_not_exist);
+        } catch (const TypeMismatch&) {
+            throw ParseError{
+                "unable to parse a key path, '" + key +
+                    "' was defined and is not an object",
+                std::move(m_filename), source};
+        }
     }
 
     return *result;
@@ -66,13 +78,11 @@ Value& Parser::parse_key_path(Object& parent, bool create_if_not_exist) {
 Array Parser::parse_array() {
     Array result;
 
-    auto array_position = expect(Token::Type::LeftBracket).position;
-
     while (true) {
         skip_line_breaks();
 
         if (at_end()) {
-            throw SyntaxError{"unclosed array", array_position};
+            expect<Token::Type::RightBracket>();
         }
 
         if (at().type == Token::Type::RightBracket) {
@@ -85,7 +95,7 @@ Array Parser::parse_array() {
             break;
         }
 
-        expect(Token::Type::LineBreak, Token::Type::Comma);
+        expect<Token::Type::LineBreak, Token::Type::Comma>();
     }
 
     eat();
@@ -96,13 +106,11 @@ Array Parser::parse_array() {
 Object Parser::parse_object() {
     Object result;
 
-    auto object_position = expect(Token::Type::LeftBrace).position;
-
     while (true) {
         skip_line_breaks();
 
         if (at_end()) {
-            throw SyntaxError{"unclosed object", object_position};
+            expect<Token::Type::RightBrace>();
         }
 
         if (at().type == Token::Type::RightBrace) {
@@ -115,7 +123,7 @@ Object Parser::parse_object() {
             break;
         }
 
-        expect(Token::Type::LineBreak, Token::Type::Comma);
+        expect<Token::Type::LineBreak, Token::Type::Comma>();
     }
 
     eat();
@@ -123,8 +131,8 @@ Object Parser::parse_object() {
     return result;
 }
 
-Value Parser::parse_integer() {
-    auto lexeme = get_token_lexeme();
+Value Parser::parse_integer(const Token& token) {
+    auto lexeme = get_token_lexeme(token);
 
     if (lexeme.starts_with('-')) {
         return from_string<Int>(lexeme);
@@ -155,29 +163,34 @@ Value Parser::parse_integer() {
 }
 
 Value Parser::parse_value() {
-    switch (at().type) {
+    auto token = expect<
+        Token::Type::LeftBracket, Token::Type::LeftBrace,
+        Token::Type::Identifier, Token::Type::Integer, Token::Type::Boolean,
+        Token::Type::Float, Token::Type::String>();
+
+    switch (token.type) {
     case Token::Type::LeftBracket:
         return parse_array();
     case Token::Type::LeftBrace:
         return parse_object();
     case Token::Type::Identifier:
-        return parse_key_path(m_data, false);
+        return parse_key_path(m_data, token, false);
     case Token::Type::Integer:
-        return parse_integer();
+        return parse_integer(token);
     case Token::Type::Boolean:
-        return get_token_lexeme() == "true";
+        return get_token_lexeme(token) == "true";
     case Token::Type::Float:
-        return from_string<Float>(get_token_lexeme());
+        return from_string<Float>(get_token_lexeme(token));
     case Token::Type::String:
-        return get_token_lexeme();
+        return get_token_lexeme(token);
     default:
-        throw SyntaxError{"unexpected token", at().position};
+        return {};
     }
 }
 
 void Parser::parse_assignment(Object& parent) {
     auto& key = parse_key_path(parent);
-    expect(Token::Type::Equal);
+    expect<Token::Type::Equal>();
     key = parse_value();
 }
 

@@ -2,13 +2,14 @@
 
 namespace lumen {
 
-std::vector<Token> Lexer::lex(std::string_view source) {
+std::vector<Token> Lexer::lex(std::string_view source, std::string filename) {
     std::vector<Token> result;
 
     m_at = source.begin();
     m_end = source.end();
 
     m_position = {1, 1};
+    m_filename = std::move(filename);
 
     m_can_parse_long_token = true;
 
@@ -19,14 +20,16 @@ std::vector<Token> Lexer::lex(std::string_view source) {
         skip_useless();
     }
 
-    result.emplace_back(m_position, Token::Type::Eof);
+    result.push_back(
+        {{m_position, {m_position.line, m_position.column + 1}},
+         Token::Type::Eof});
 
     return result;
 }
 
 Token Lexer::get_identifier() noexcept {
     std::string result;
-    auto position = m_position;
+    auto begin = m_position;
 
     while (!at_end() && (std::isalnum(at()) || at() == '-' || at() == '_')) {
         result += eat();
@@ -35,15 +38,15 @@ Token Lexer::get_identifier() noexcept {
     m_can_parse_long_token = false;
 
     if (result == "true" || result == "false") {
-        return {position, Token::Type::Boolean, result};
+        return {{begin, m_position}, Token::Type::Boolean, result};
     }
 
-    return {position, Token::Type::Identifier, result};
+    return {{begin, m_position}, Token::Type::Identifier, result};
 }
 
 Token Lexer::get_number() {
     std::string result;
-    auto position = m_position;
+    auto begin = m_position;
 
     auto get_if_e = [&] {
         if (at_end() || at() != 'e') {
@@ -67,11 +70,17 @@ Token Lexer::get_number() {
         result += eat();
 
         if (at_end()) {
-            return {position, Token::Type::Integer, result};
+            return {{begin, m_position}, Token::Type::Integer, result};
         }
 
         if (std::isdigit(at()) || at() == '_') {
-            throw SyntaxError{"leading zeros are not allowed", m_position};
+            Position leading_zero_position{
+                m_position.line, m_position.column - 1};
+
+            throw ParseError{
+                "leading zeros are not allowed",
+                std::move(m_filename),
+                {leading_zero_position, leading_zero_position}};
         }
 
         switch (at()) {
@@ -80,30 +89,30 @@ Token Lexer::get_number() {
             result += get_integer(
                 [](char character) { return std::isxdigit(character); });
 
-            return {position, Token::Type::Integer, result};
+            return {{begin, m_position}, Token::Type::Integer, result};
         case 'o':
             result += eat();
             result += get_integer([](char character) {
                 return character >= '0' && character <= '7';
             });
 
-            return {position, Token::Type::Integer, result};
+            return {{begin, m_position}, Token::Type::Integer, result};
         case 'b':
             result += eat();
             result += get_integer([](char character) {
                 return character == '0' || character == '1';
             });
 
-            return {position, Token::Type::Integer, result};
+            return {{begin, m_position}, Token::Type::Integer, result};
         case '.':
             result += eat();
             result += get_integer();
 
             get_if_e();
 
-            return {position, Token::Type::Float, result};
+            return {{begin, m_position}, Token::Type::Float, result};
         default:
-            return {position, Token::Type::Integer, result};
+            return {{begin, m_position}, Token::Type::Integer, result};
         }
     } else {
         if (at() == '+') {
@@ -121,24 +130,27 @@ Token Lexer::get_number() {
 
         get_if_e();
 
-        return {position, Token::Type::Float, result};
+        return {{begin, m_position}, Token::Type::Float, result};
     }
 
     if (get_if_e()) {
-        return {position, Token::Type::Float, result};
+        return {{begin, m_position}, Token::Type::Float, result};
     }
 
-    return {position, Token::Type::Integer, result};
+    return {{begin, m_position}, Token::Type::Integer, result};
 }
 
 Token Lexer::get_string() {
     std::string result;
     char quote = eat();
-    auto position = m_position;
+    auto begin = m_position;
 
-    auto throw_if_unclosed = [this, position] {
+    auto throw_if_unclosed = [this, begin] {
         if (at_end()) {
-            throw SyntaxError{"unclosed string", position};
+            throw ParseError{
+                "unterminated string",
+                std::move(m_filename),
+                {begin, {m_position.line, m_position.column - 1}}};
         }
     };
 
@@ -178,7 +190,10 @@ Token Lexer::get_string() {
 
     m_can_parse_long_token = false;
 
-    return {position, Token::Type::String, result};
+    return {
+        {begin, {m_position.line, m_position.column - 1}},
+        Token::Type::String,
+        result};
 }
 
 Token Lexer::get_token() {
@@ -197,14 +212,17 @@ Token Lexer::get_token() {
 
         if (at() == '`') {
             auto token = get_string();
-            return {token.position, Token::Type::Identifier, token.lexeme};
+            return {
+                token.source, Token::Type::Identifier, std::move(token.lexeme)};
         }
     }
 
     auto position = m_position;
 
     Token::Type type = [this, position] {
-        switch (eat()) {
+        char character = eat();
+
+        switch (character) {
         case '=':
             return Token::Type::Equal;
         case ';':
@@ -229,12 +247,15 @@ Token Lexer::get_token() {
             return Token::Type::LineBreak;
         }
 
-        throw SyntaxError{"unexpected character", position};
+        throw ParseError{
+            std::string{"unexpected '"} + character + "'",
+            m_filename,
+            {position, position}};
     }();
 
     m_can_parse_long_token = true;
 
-    return {position, type};
+    return {{position, position}, type};
 }
 
 } // namespace lumen

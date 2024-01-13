@@ -2,11 +2,9 @@
 #define LUMENCPP_VALUE_H
 
 #include <concepts>
-#include <cstddef>
 #include <cstdint>
 #include <initializer_list>
 #include <map>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -14,9 +12,24 @@
 #include <variant>
 #include <vector>
 
+#include "exceptions.h"
+
 namespace lumen {
 
+class Value;
+
+using UInt = std::uint64_t;
+using Int = std::int64_t;
+using Float = double;
+using Bool = bool;
+using String = std::string;
+using Array = std::vector<Value>;
+using Object = std::unordered_map<std::string, Value>;
+
 namespace details {
+
+using ValueType =
+    std::variant<std::monostate, UInt, Int, Float, Bool, String, Array, Object>;
 
 template <typename ValueType> struct IsStdVector : std::false_type {};
 
@@ -42,17 +55,17 @@ struct IsStdUnorderedMap<std::unordered_map<Args...>> : std::true_type {};
 template <typename ValueType>
 concept StdUnorderedMap = IsStdUnorderedMap<ValueType>::value;
 
+template <typename ValueType, typename Variant>
+struct IsStdVariantMember : std::false_type {};
+
+template <typename ValueType, typename... Args>
+struct IsStdVariantMember<ValueType, std::variant<Args...>>
+: std::disjunction<std::is_same<ValueType, Args>...> {};
+
+template <typename ValueType, typename Variant>
+concept StdVariantMember = IsStdVariantMember<ValueType, Variant>::value;
+
 } // namespace details
-
-class Value;
-
-using UInt = std::uint64_t;
-using Int = std::int64_t;
-using Float = double;
-using Bool = bool;
-using String = std::string;
-using Array = std::vector<Value>;
-using Object = std::unordered_map<std::string, Value>;
 
 class Value {
 public:
@@ -221,7 +234,8 @@ public:
         }
     }
 
-    template <typename ValueType> [[nodiscard]] auto& get() {
+    template <details::StdVariantMember<details::ValueType> ValueType>
+    [[nodiscard]] auto& get() {
         if (get_type() == Type::Undefined) {
             m_value = ValueType{};
         }
@@ -229,7 +243,12 @@ public:
         try {
             return std::get<ValueType>(m_value);
         } catch (...) {
-            throw std::runtime_error{"value is of different type"};
+            if (get_type() == Type::Undefined) {
+                throw TypeMismatch{"attempted to retrieve an undefined value"};
+            }
+
+            throw TypeMismatch{
+                "attempted to retrieve a value with an incompatible type"};
         }
     }
 
@@ -268,9 +287,14 @@ private:
     template <typename ValueType>
     [[nodiscard]] const ValueType& get_safe() const {
         try {
-            return get<ValueType>();
+            return std::get<ValueType>(m_value);
         } catch (...) {
-            throw std::runtime_error{"value is of different type"};
+            if (get_type() == Type::Undefined) {
+                throw TypeMismatch{"attempted to retrieve an undefined value"};
+            }
+
+            throw TypeMismatch{
+                "attempted to retrieve a value with an incompatible type"};
         }
     }
 
@@ -278,8 +302,7 @@ private:
         return std::get<ValueType>(m_value);
     }
 
-    std::variant<std::monostate, UInt, Int, Float, Bool, String, Array, Object>
-        m_value;
+    details::ValueType m_value;
 };
 
 } // namespace lumen

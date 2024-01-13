@@ -49,9 +49,16 @@ struct Document {
     Object data;
 };
 
+[[nodiscard]] inline Document parse(
+    std::string_view source, const std::string& filename = "<string>",
+    Object predefined = {}) {
+    return Parser{}.parse(
+        Lexer{}.lex(source, filename), filename, std::move(predefined));
+}
+
 [[nodiscard]] inline Document
-parse(std::string_view source, Object predefined = {}) {
-    return Parser{}.parse(Lexer{}.lex(source), std::move(predefined));
+parse(std::string_view source, Object predefined, const std::string& filename) {
+    return parse(source, filename, std::move(predefined));
 }
 
 [[nodiscard]] inline auto
@@ -59,7 +66,7 @@ parse_file(const std::filesystem::path& path, Object predefined = {}) {
     std::ostringstream buffer;
     buffer << std::ifstream{path}.rdbuf();
 
-    return parse(buffer.str(), std::move(predefined));
+    return parse(buffer.str(), path, std::move(predefined));
 }
 
 } // namespace lumen

@@ -13,7 +13,8 @@ namespace lumen {
 
 class Lexer {
 public:
-    [[nodiscard]] std::vector<Token> lex(std::string_view source);
+    [[nodiscard]] std::vector<Token>
+    lex(std::string_view source, std::string filename);
 
 private:
     [[nodiscard]] char at() const noexcept { return *m_at; }
@@ -65,7 +66,10 @@ private:
         }
 
         if (result.empty()) {
-            throw SyntaxError{"expected a digit", m_position};
+            Position end_position{m_position.line, m_position.column + 1};
+
+            throw ParseError{
+                "expected a digit", m_filename, {m_position, end_position}};
         }
 
         return result;
@@ -85,6 +89,7 @@ private:
     std::string_view::iterator m_at{};
     std::string_view::iterator m_end{};
 
+    std::string m_filename;
     Position m_position{};
 
     bool m_can_parse_long_token = false;

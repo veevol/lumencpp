@@ -30,14 +30,8 @@ To parse a file, you can use the `lumen::parse_file` function:
 #include <string>
 
 int main() {
-    try {
-        auto document = lumen::parse_file("metadata.lm");
-        std::cout << document["license"].as<std::string>() << '\n';
-    } catch (const lumen::SyntaxError& error) {
-        std::cout << error.pretty() << '\n';
-    } catch (const std::exception& error) {
-        std::cout << "error: " << error.what() << '\n';
-    }
+    auto document = lumen::parse_file("metadata.lm");
+    std::cout << document["license"].as<std::string>() << '\n';
 }
 ```
 
@@ -50,17 +44,11 @@ To parse a string, use `lumen::parse` function:
 #include <string>
 
 int main() {
-    try {
-        auto document = lumen::parse(R"(
-            license = "MIT License"
-        )");
+    auto document = lumen::parse(R"(
+        license = "MIT License"
+    )");
 
-        std::cout << document["license"].as<std::string>() << '\n';
-    } catch (const lumen::SyntaxError& error) {
-        std::cout << error.pretty() << '\n';
-    } catch (const std::exception& error) {
-        std::cout << "error: " << error.what() << '\n';
-    }
+    std::cout << document["license"].as<std::string>() << '\n';
 }
 ```
 

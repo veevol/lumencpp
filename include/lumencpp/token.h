@@ -30,11 +30,11 @@ struct Token {
     };
 
     [[nodiscard]] Token(
-        Position position, Type type,
+        SourceRegion source, Type type,
         std::optional<std::string> lexeme = std::nullopt)
-    : position{position}, type{type}, lexeme{std::move(lexeme)} {}
+    : source{source}, type{type}, lexeme{std::move(lexeme)} {}
 
-    Position position;
+    SourceRegion source;
 
     Type type;
     std::optional<std::string> lexeme;

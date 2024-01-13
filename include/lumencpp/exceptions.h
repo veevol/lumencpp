@@ -1,31 +1,49 @@
 #ifndef LUMENCPP_EXCEPTIONS_H
 #define LUMENCPP_EXCEPTIONS_H
 
-#include <cstddef>
-#include <stdexcept>
+#include <exception>
 #include <string>
+#include <utility>
+
+#include "source_region.h"
 
 namespace lumen {
 
-struct Position {
-    std::uint32_t line;
-    std::uint32_t column;
-};
+struct Exception : std::exception {};
 
-struct SyntaxError : std::runtime_error {
-    [[nodiscard]] SyntaxError(const char* message, Position position) noexcept
-    : std::runtime_error{message}, position{position} {}
+struct ParseError : Exception {
+    [[nodiscard]] ParseError(
+        std::string description, std::string filename,
+        SourceRegion source) noexcept
+    : description{std::move(description)}, filename{std::move(filename)},
+      source{source} {}
 
-    [[nodiscard]] SyntaxError(
-        const std::string& message, Position position) noexcept
-    : SyntaxError{message.c_str(), position} {}
+    [[nodiscard]] const char* what() const noexcept override {
+        static std::string formatted;
+        formatted = "in " + filename + ": " + description + " (line " +
+                    std::to_string(source.begin.line) + ", column " +
+                    std::to_string(source.begin.column) + ")";
 
-    [[nodiscard]] auto pretty() const noexcept {
-        return std::to_string(position.line) + ":" +
-               std::to_string(position.column) + ": error: " + what();
+        return formatted.c_str();
     }
 
-    Position position;
+    std::string description;
+    std::string filename;
+    SourceRegion source;
+};
+
+struct TypeMismatch : Exception {
+    [[nodiscard]] TypeMismatch(std::string description) noexcept
+    : description{std::move(description)} {}
+
+    [[nodiscard]] const char* what() const noexcept override {
+        static std::string formatted;
+        formatted = "type mismatch: " + description;
+
+        return formatted.c_str();
+    }
+
+    std::string description;
 };
 
 } // namespace lumen
