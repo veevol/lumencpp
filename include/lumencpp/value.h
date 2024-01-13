@@ -135,107 +135,8 @@ public:
         return std::holds_alternative<ValueType>(m_value);
     }
 
-    template <std::integral Integral>
-        requires(!std::is_same_v<Integral, Bool>)
-    [[nodiscard]] auto as() const {
-        if (is<UInt>()) {
-            return static_cast<Integral>(get<UInt>());
-        }
-
-        return static_cast<Integral>(get_safe<Int>());
-    }
-
-    template <std::same_as<Bool>> [[nodiscard]] auto as() const {
-        return get_safe<Bool>();
-    }
-
-    template <std::floating_point FloatingPoint> [[nodiscard]] auto as() const {
-        if (is<UInt>()) {
-            return static_cast<FloatingPoint>(get<UInt>());
-        }
-
-        if (is<Int>()) {
-            return static_cast<FloatingPoint>(get<Int>());
-        }
-
-        return static_cast<FloatingPoint>(get_safe<Float>());
-    }
-
-    template <std::constructible_from<const char*> StringLike>
-        requires(
-            !std::is_same_v<StringLike, String> &&
-            !std::is_same_v<StringLike, Bool>)
-    [[nodiscard]] auto as() const {
-        return StringLike{get_safe<String>().c_str()};
-    }
-
-    template <std::same_as<String>> [[nodiscard]] const auto& as() const {
-        return get_safe<String>();
-    }
-
-    template <details::StdVector Vector>
-        requires(!std::is_same_v<Vector, Array>)
-    [[nodiscard]] auto as() const {
-        Vector result;
-        result.reserve(get_safe<Array>().size());
-
-        for (const auto& value : get<Array>()) {
-            result.push_back(value.as<typename Vector::value_type>());
-        }
-
-        return result;
-    }
-
-    template <std::same_as<Array>> [[nodiscard]] const auto& as() const {
-        return get_safe<Array>();
-    }
-
-    template <details::StdMap Map>
-        requires(
-            std::is_constructible_v<typename Map::key_type, Object::key_type>)
-    [[nodiscard]] auto as() const {
-        Map result;
-
-        for (const auto& [key, value] : get_safe<Object>()) {
-            result[typename Map::key_type{key}] =
-                value.template as<typename Map::mapped_type>();
-        }
-
-        return result;
-    }
-
-    template <details::StdUnorderedMap UnorderedMap>
-        requires(
-            std::is_constructible_v<
-                typename UnorderedMap::key_type, Object::key_type> &&
-            !std::is_same_v<UnorderedMap, Object>)
-    [[nodiscard]] auto as() const {
-        UnorderedMap result;
-        result.reserve(get_safe<Object>().size());
-
-        for (const auto& [key, value] : get<Object>()) {
-            result[typename UnorderedMap::key_type{key}] =
-                value.template as<typename UnorderedMap::mapped_type>();
-        }
-
-        return result;
-    }
-
-    template <std::same_as<Object>> [[nodiscard]] const auto& as() const {
-        return get_safe<Object>();
-    }
-
-    template <typename ValueType>
-    [[nodiscard]] auto get_or(ValueType value) const noexcept {
-        try {
-            return as<ValueType>();
-        } catch (...) {
-            return value;
-        }
-    }
-
     template <details::StdVariantMember<details::ValueType> ValueType>
-    [[nodiscard]] auto& get() {
+    [[nodiscard]] auto& get_strict() {
         if (get_type() == Type::Undefined) {
             m_value = ValueType{};
         }
@@ -252,40 +153,8 @@ public:
         }
     }
 
-    [[nodiscard]] const auto& operator[](const Object::key_type& key) const {
-        return get_safe<Object>().at(key);
-    }
-
-    [[nodiscard]] auto& operator[](const Object::key_type& key) {
-        return get<Object>()[key];
-    }
-
-    [[nodiscard]] const auto& operator[](Array::size_type index) const {
-        return get_safe<Array>()[index];
-    }
-
-    [[nodiscard]] auto& operator[](Array::size_type index) {
-        return get<Array>()[index];
-    }
-
-    template <typename ValueType>
-    [[nodiscard]] bool operator==(const ValueType& other) const noexcept {
-        try {
-            return as<ValueType>() == other;
-        } catch (...) {
-            return false;
-        }
-    }
-
-    [[nodiscard]] bool operator!=(const auto& other) const noexcept {
-        return !(*this == other);
-    }
-
-    [[nodiscard]] bool operator==(const Value& other) const = default;
-
-private:
-    template <typename ValueType>
-    [[nodiscard]] const ValueType& get_safe() const {
+    template <details::StdVariantMember<details::ValueType> ValueType>
+    [[nodiscard]] const auto& get_strict() const {
         try {
             return std::get<ValueType>(m_value);
         } catch (...) {
@@ -298,7 +167,144 @@ private:
         }
     }
 
-    template <typename ValueType> [[nodiscard]] const ValueType& get() const {
+    template <std::integral Integral>
+        requires(!std::is_same_v<Integral, Bool>)
+    [[nodiscard]] auto get() const {
+        if (is<UInt>()) {
+            return static_cast<Integral>(get_impl<UInt>());
+        }
+
+        return static_cast<Integral>(get_strict<Int>());
+    }
+
+    template <std::same_as<Bool>> [[nodiscard]] auto get() const {
+        return get_strict<Bool>();
+    }
+
+    template <std::floating_point FloatingPoint>
+    [[nodiscard]] auto get() const {
+        if (is<UInt>()) {
+            return static_cast<FloatingPoint>(get_impl<UInt>());
+        }
+
+        if (is<Int>()) {
+            return static_cast<FloatingPoint>(get_impl<Int>());
+        }
+
+        return static_cast<FloatingPoint>(get_strict<Float>());
+    }
+
+    template <std::constructible_from<const char*> StringLike>
+        requires(
+            !std::is_same_v<StringLike, String> &&
+            !std::is_same_v<StringLike, Bool>)
+    [[nodiscard]] auto get() const {
+        return StringLike{get_strict<String>().c_str()};
+    }
+
+    template <std::same_as<String>> [[nodiscard]] const auto& get() const {
+        return get_strict<String>();
+    }
+
+    template <details::StdVector Vector>
+        requires(!std::is_same_v<Vector, Array>)
+    [[nodiscard]] auto get() const {
+        Vector result;
+        result.reserve(get_strict<Array>().size());
+
+        for (const auto& value : get_impl<Array>()) {
+            result.push_back(value.get<typename Vector::value_type>());
+        }
+
+        return result;
+    }
+
+    template <std::same_as<Array>> [[nodiscard]] const auto& get() const {
+        return get_strict<Array>();
+    }
+
+    template <details::StdMap Map>
+        requires(
+            std::is_constructible_v<typename Map::key_type, Object::key_type>)
+    [[nodiscard]] auto get() const {
+        Map result;
+
+        for (const auto& [key, value] : get_strict<Object>()) {
+            result[typename Map::key_type{key}] =
+                value.template get<typename Map::mapped_type>();
+        }
+
+        return result;
+    }
+
+    template <details::StdUnorderedMap UnorderedMap>
+        requires(
+            std::is_constructible_v<
+                typename UnorderedMap::key_type, Object::key_type> &&
+            !std::is_same_v<UnorderedMap, Object>)
+    [[nodiscard]] auto get() const {
+        UnorderedMap result;
+        result.reserve(get_strict<Object>().size());
+
+        for (const auto& [key, value] : get_impl<Object>()) {
+            result[typename UnorderedMap::key_type{key}] =
+                value.template get<typename UnorderedMap::mapped_type>();
+        }
+
+        return result;
+    }
+
+    template <std::same_as<Object>> [[nodiscard]] const auto& get() const {
+        return get_strict<Object>();
+    }
+
+    template <typename ValueType>
+    [[nodiscard]] auto get_or(ValueType value) const noexcept {
+        try {
+            return get<ValueType>();
+        } catch (...) {
+            return value;
+        }
+    }
+
+    [[nodiscard]] const auto& operator[](const Object::key_type& key) const {
+        return get_strict<Object>().at(key);
+    }
+
+    [[nodiscard]] auto& operator[](const Object::key_type& key) {
+        return get_strict<Object>()[key];
+    }
+
+    [[nodiscard]] const auto& operator[](Array::size_type index) const {
+        return get_strict<Array>()[index];
+    }
+
+    [[nodiscard]] auto& operator[](Array::size_type index) {
+        return get_strict<Array>()[index];
+    }
+
+    template <typename ValueType>
+    [[nodiscard]] bool operator==(const ValueType& other) const noexcept {
+        try {
+            return get<ValueType>() == other;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    [[nodiscard]] bool operator!=(const auto& other) const noexcept {
+        return !(*this == other);
+    }
+
+    [[nodiscard]] bool operator==(const Value& other) const noexcept = default;
+
+private:
+    template <typename ValueType> [[nodiscard]] ValueType& get_impl() {
+        return std::get<ValueType>(m_value);
+    }
+
+    template <typename ValueType>
+    [[nodiscard]] const ValueType& get_impl() const {
         return std::get<ValueType>(m_value);
     }
 

@@ -63,7 +63,8 @@ Value& Parser::parse_key_path(
         eat();
 
         try {
-            return parse_key_path(result->get<Object>(), create_if_not_exist);
+            return parse_key_path(
+                result->get_strict<Object>(), create_if_not_exist);
         } catch (const TypeMismatch&) {
             throw ParseError{
                 "unable to parse a key path, '" + key +
