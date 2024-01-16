@@ -119,47 +119,19 @@ private:
         case Token::Type::RightBrace:
             return "'}'";
         case Token::Type::Identifier:
-            if (add_an_article) {
-                return "a key";
-            }
-
-            return "key";
+            return add_an_article ? "a key" : "key";
         case Token::Type::Integer:
-            if (add_an_article) {
-                return "an integer";
-            }
-
-            return "integer";
+            return add_an_article ? "an integer" : "integer";
         case Token::Type::Boolean:
-            if (add_an_article) {
-                return "a boolean";
-            }
-
-            return "boolean";
+            return add_an_article ? "a boolean" : "boolean";
         case Token::Type::Float:
-            if (add_an_article) {
-                return "a float";
-            }
-
-            return "float";
+            return add_an_article ? "a float" : "float";
         case Token::Type::String:
-            if (add_an_article) {
-                return "a string";
-            }
-
-            return "string";
+            return add_an_article ? "a string" : "string";
         case Token::Type::LineBreak:
-            if (add_an_article) {
-                return "an end of line";
-            }
-
-            return "end of line";
+            return add_an_article ? "an end of line" : "end of line";
         case Token::Type::Eof:
-            if (add_an_article) {
-                return "an end of file";
-            }
-
-            return "end of file";
+            return add_an_article ? "an end of file" : "end of file";
         }
 
         return "";

@@ -170,11 +170,8 @@ public:
     template <std::integral Integral>
         requires(!std::is_same_v<Integral, Bool>)
     [[nodiscard]] auto get() const {
-        if (is<UInt>()) {
-            return static_cast<Integral>(get_impl<UInt>());
-        }
-
-        return static_cast<Integral>(get_strict<Int>());
+        return is<UInt>() ? static_cast<Integral>(get_impl<UInt>())
+                          : static_cast<Integral>(get_strict<Int>());
     }
 
     template <std::same_as<Bool>> [[nodiscard]] auto get() const {

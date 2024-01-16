@@ -37,11 +37,11 @@ Token Lexer::get_identifier() noexcept {
 
     m_can_parse_long_token = false;
 
-    if (result == "true" || result == "false") {
-        return {{begin, m_position}, Token::Type::Boolean, result};
-    }
-
-    return {{begin, m_position}, Token::Type::Identifier, result};
+    return {
+        {begin, m_position},
+        (result == "true" || result == "false") ? Token::Type::Boolean
+                                                : Token::Type::Identifier,
+        result};
 }
 
 Token Lexer::get_number() {
