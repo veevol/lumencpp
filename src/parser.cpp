@@ -1,6 +1,3 @@
-#include <bitset>
-#include <ios>
-#include <limits>
 #include <utility>
 
 #include "../include/lumencpp/parser.h"
@@ -133,34 +130,13 @@ Object Parser::parse_object() {
 }
 
 Value Parser::parse_integer(const Token& token) {
-    auto lexeme = get_token_lexeme(token);
+    auto number = get_token_lexeme(token);
 
-    if (lexeme.starts_with('-')) {
-        return from_string<Int>(lexeme);
+    if (number.starts_with('-')) {
+        return from_string<Int>(token.source, number);
     }
 
-    if (lexeme.starts_with('0')) {
-        if (lexeme.size() < 2) {
-            return 0U;
-        }
-
-        auto number = lexeme.substr(2);
-
-        if (lexeme.starts_with("0x")) {
-            return from_string<UInt>(number, std::hex);
-        }
-
-        if (lexeme.starts_with("0o")) {
-            return from_string<UInt>(number, std::oct);
-        }
-
-        if (lexeme.starts_with("0b")) {
-            return std::bitset<std::numeric_limits<UInt>::digits>(number)
-                .to_ulong();
-        }
-    }
-
-    return from_string<UInt>(lexeme);
+    return from_string<UInt>(token.source, number);
 }
 
 Value Parser::parse_value() {
@@ -181,7 +157,7 @@ Value Parser::parse_value() {
     case Token::Type::Boolean:
         return get_token_lexeme(token) == "true";
     case Token::Type::Float:
-        return from_string<Float>(get_token_lexeme(token));
+        return from_string<Float>(token.source, get_token_lexeme(token));
     case Token::Type::String:
         return get_token_lexeme(token);
     default:

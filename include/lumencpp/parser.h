@@ -2,8 +2,9 @@
 #define LUMENCPP_PARSER_H
 
 #include <array>
-#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "exceptions.h"
@@ -80,16 +81,56 @@ private:
         return *token.lexeme;
     }
 
-    template <typename ValueType, typename... Manipulators>
-    [[nodiscard]] auto
-    from_string(std::string value, Manipulators... manipulators) const {
-        ValueType result;
+    template <std::same_as<UInt>>
+    [[nodiscard]] UInt
+    from_string(SourceRegion source, const std::string& value) {
+        try {
+            if (value.starts_with("0x")) {
+                constexpr auto base = 16;
+                return std::stoull(value, nullptr, base);
+            }
 
-        std::istringstream iss{std::move(value)};
-        (manipulators(iss), ...);
+            if (value.starts_with("0o")) {
+                constexpr auto base = 8;
+                return std::stoull(value.substr(2), nullptr, base);
+            }
 
-        iss >> result;
-        return result;
+            if (value.starts_with("0b")) {
+                constexpr auto base = 2;
+                return std::stoull(value.substr(2), nullptr, base);
+            }
+
+            constexpr auto base = 10;
+            return std::stoull(value, nullptr, base);
+        } catch (const std::out_of_range&) {
+            throw ParseError{
+                "integer '" + value + "' is out of range",
+                std::move(m_filename), source};
+        }
+    }
+
+    template <std::same_as<Int>>
+    [[nodiscard]] Int
+    from_string(SourceRegion source, const std::string& value) {
+        try {
+            return std::stoll(value);
+        } catch (const std::out_of_range&) {
+            throw ParseError{
+                "integer '" + value + "' is out of range",
+                std::move(m_filename), source};
+        }
+    }
+
+    template <std::same_as<Float>>
+    [[nodiscard]] Float
+    from_string(SourceRegion source, const std::string& value) {
+        try {
+            return std::stod(value);
+        } catch (const std::out_of_range&) {
+            throw ParseError{
+                "float '" + value + "' is out of range", std::move(m_filename),
+                source};
+        }
     }
 
     [[nodiscard]] Array parse_array();
