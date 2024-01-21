@@ -48,7 +48,8 @@ Value& Parser::parse_key_path(
     auto key = get_token_lexeme(token);
     auto source = token.source;
 
-    if (!create_if_not_exist && !parent.contains(key)) {
+    if (!create_if_not_exist &&
+        parent[key].get_type() == Value::Type::Undefined) {
         throw ParseError{
             "field '" + key + "' does not exist", std::move(m_filename),
             source};
